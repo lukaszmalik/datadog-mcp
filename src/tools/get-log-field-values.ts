@@ -48,17 +48,12 @@ export async function getLogFieldValues(input: GetLogFieldValuesInput): Promise<
     compute: [
       {
         aggregation: "count",
-        type: "total",
       },
     ],
     group_by: [
       {
         facet: input.field,
         limit: input.limit,
-        sort: {
-          aggregation: "count",
-          order: "desc",
-        },
       },
     ],
   };

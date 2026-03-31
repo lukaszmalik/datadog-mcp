@@ -75,7 +75,7 @@ export async function aggregateLogs(input: AggregateLogsInput): Promise<string> 
     compute: input.compute.map((c) => ({
       aggregation: c.aggregation,
       ...(c.metric && { metric: c.metric }),
-      type: c.type,
+      ...(c.type === "timeseries" && { type: "timeseries" }),
       ...(c.interval && { interval: c.interval }),
     })),
     ...(input.group_by && {

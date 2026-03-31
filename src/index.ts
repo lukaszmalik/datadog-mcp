@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import "dotenv/config";
 import { createServer } from "node:http";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -59,12 +60,11 @@ async function main() {
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined, // stateless
     });
-
     await server.connect(transport);
 
-    const httpServer = createServer((req, res) => {
+    const httpServer = createServer(async (req, res) => {
       if (req.url === "/mcp") {
-        transport.handleRequest(req, res);
+        await transport.handleRequest(req, res);
       } else if (req.url === "/health") {
         res.writeHead(200).end("ok");
       } else {
