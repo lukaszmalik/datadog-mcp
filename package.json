@@ -1,7 +1,7 @@
 {
   "name": "datadog-mcp",
   "version": "1.0.0",
-  "description": "Read-only Datadog MCP server for log searching and event querying",
+  "description": "Read-only Datadog MCP server for logs, events and On-Call",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

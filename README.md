@@ -1,6 +1,6 @@
 # datadog-mcp
 
-A read-only [Model Context Protocol](https://modelcontextprotocol.io/) server that exposes Datadog log search, log analytics, and event queries as MCP tools. Lets LLM-based assistants query your Datadog data without direct API access.
+A read-only [Model Context Protocol](https://modelcontextprotocol.io/) server that exposes Datadog log search, log analytics, event queries and On-Call (who is on call, pages) as MCP tools. Lets LLM-based assistants query your Datadog data without direct API access.
 
 ## Tools
 
@@ -10,6 +10,12 @@ A read-only [Model Context Protocol](https://modelcontextprotocol.io/) server th
 | `aggregate_logs` | Run analytics on logs — count, avg, sum, percentiles, grouped by facets, with optional timeseries bucketing |
 | `get_log_field_values` | Discover possible values for a log field/facet (service, status, host, etc.) sorted by frequency |
 | `search_events` | Search the event stream for deploys, alerts, monitor triggers, and other events |
+| `who_is_on_call` | Who is on call right now for a team (or every team), with the escalation steps behind them |
+| `my_latest_page` | The most recent On-Call page sent to you, with its timeline and linked Jira tickets |
+| `list_pages` | On-Call pages, newest first, filtered by time, team, "sent to me", status, urgency or a tag/text query |
+| `get_page` | One On-Call page by ID, with description and timeline (notifications, acknowledge, resolve) |
+
+The On-Call tools only send GET requests. The application key's user needs On-Call read access (`on_call_read`) and team read access (`teams_read`).
 
 ## Prerequisites
 
@@ -182,6 +188,53 @@ Search the Datadog event stream.
 | `tags` | string | — | Comma-separated tags (e.g. `env:prod,service:web`) |
 | `limit` | number | `50` | Max events (1–1000) |
 | `unaggregated` | boolean | `false` | Return unaggregated events |
+
+### who_is_on_call
+
+Who is on call right now in Datadog On-Call.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `team` | string | — | Team ID, handle or name; a unique partial match works (`payments`). Omit it to list every team, which makes one request per team. |
+
+### my_latest_page
+
+The most recent On-Call page that lists the application key's own user as a responder, with its full details and timeline. It reads pages newest first, 100 per request, and stops at the first match. One request usually covers about three days.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `since` | string | `now-2d` | How far back to look: relative (`now-6h`, `now-1w`), ISO 8601 or epoch seconds |
+| `include_timeline` | boolean | `true` | Include the timeline |
+| `max_requests` | number | `5` | Max list requests (1–50) |
+
+### list_pages
+
+On-Call pages, newest first. Team, "mine", status and urgency are filtered on the client, so a narrow filter over a long window can take many requests. When the scan stops at `max_requests` before reaching `since`, the response says so.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `since` | string | `now-1d` | How far back to look |
+| `team` | string | — | Only pages sent to this team (ID, handle or name) |
+| `mine` | boolean | `false` | Only pages where you were a responder |
+| `status` | string | — | `triggered`, `acknowledged` or `resolved` |
+| `urgency` | string | — | `low` or `high` |
+| `query` | string | — | Server-side search over page tags and text (`team:web`, `checkout`) |
+| `limit` | number | `20` | Max pages to return (1–100) |
+| `max_requests` | number | `10` | Max list requests, 100 pages each (1–50) |
+| `include_description` | boolean | `false` | Include the first 500 characters of each description |
+
+### get_page
+
+One On-Call page by ID.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `id` | string | *(required)* | Page ID (UUID) from `list_pages` or `my_latest_page` |
+| `include_timeline` | boolean | `true` | Include the timeline: created, each notification with its channel (push, SMS, voice) and delivery time, acknowledged, resolved |
+
+Page responses include the team, responders, who raised the page (a user or a monitor), who closed it, minutes to acknowledge and close, and any Jira keys found in `atlassian.net/browse/` links.
+
+**Note:** the page endpoints (`/api/v2/on-call/pages`, `/pages/{id}`, `/pages/{id}/timeline`) are not in Datadog's published API reference, which only lists the POST calls for creating, acknowledging and resolving pages. They are the endpoints the Datadog web app reads from, and Datadog can change them without notice.
 
 ## License
 
